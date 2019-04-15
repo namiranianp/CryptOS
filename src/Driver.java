@@ -1,42 +1,60 @@
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 
 public class Driver {
+	static int level = 0;
+	static HashSet<Integer> editingFiles;
+	static HashMap<Integer, Inode> allNodes;
+
+	public static Inode createFileSystem(File rootFile) {
+		System.out.println("root is: " + rootFile);
+		Inode rootNode = new Inode(level, rootFile);
+
+		// TODO: sets the hash upon initialization
+		rootNode.setHash(RecursiveHashCalculaor.calculateFileHash(rootNode));
+
+		File childFile;
+		Inode childNode;
+
+		if (editingFiles.contains(level)) {
+			rootNode.setBeingEdited(true);
+		}
+
+		allNodes.put(level, rootNode);
+
+		String absolutePath = rootFile.getAbsolutePath();
+
+		if (rootFile.isDirectory()) {
+			for (String s : rootFile.list()) {
+				childFile = new File(absolutePath + '/' + s);
+				level++;
+				childNode = createFileSystem(childFile);
+				rootNode.setHash(rootNode.getHash() + childNode.getHash());
+				rootNode.addChild(childNode);
+			}
+		}
+
+		return rootNode;
+	}
 
 	public static void main(String[] args) {
-		Inode root = new Inode(0);
+		editingFiles = new HashSet<>();
+		editingFiles.add(3);
+		editingFiles.add(12);
 
-		Inode inode1 = new Inode(1);
-		Inode inode2 = new Inode(2);
-		Inode inode3 = new Inode(3);
-		Inode inode4 = new Inode(4);
-		Inode inode5 = new Inode(5);
-		Inode inode6 = new Inode(6);
-		Inode inode7 = new Inode(7);
-		Inode inode8 = new Inode(8);
-		Inode inode9 = new Inode(9);
+		allNodes = new HashMap<>();
 
-		// level 1
-		root.addChild(inode1);
-		root.addChild(inode2);
-		root.addChild(inode3);
+		File rootFile = new File("/Users/pedramaranian/code/212/FileSystem");
 
-		// level 2
-		inode1.addChild(inode4);
-		inode1.addChild(inode5);
-		inode2.addChild(inode6);
+		System.out.println("getPath " + rootFile.getAbsolutePath());
 
-		// level 3
-		inode4.addChild(inode7);
-		inode6.addChild(inode8);
-		inode6.addChild(inode9);
-
-		// what I am editing
-		inode7.setBeingEdited(true);
-		inode9.setBeingEdited(true);
-		inode8.setBeingEdited(true);
+		Inode root = createFileSystem(rootFile);
 
 		System.out.println(root);
 
-		RecursiveHashCalculaor.calcultateHash(inode7);
+		RecursiveHashCalculaor.calcultateHash(allNodes.get(3));
 
 		System.out.println(root);
 	}

@@ -38,7 +38,6 @@ public class RecursiveHashCalculaor {
 				if (child.isBeingEdited()) {
 					System.out.println(" 1");
 					// TODO in multithreading we'd wait for this
-					System.err.println("node " + child.getId() + " is being edited");
 					child.setBeingEdited(false);
 
 					nodeHash = calculateFileHash(child);
@@ -52,8 +51,6 @@ public class RecursiveHashCalculaor {
 					System.out.println(" 2");
 					// TODO in multithreading we'd wait for this
 					// child has an out of date hash, must recursively update downward
-
-					System.err.println("node " + child.getId() + " has a child being edited");
 
 					recursivelyCalculateHash(child);
 				} else if (!child.hasOldHash()){
@@ -78,7 +75,10 @@ public class RecursiveHashCalculaor {
 		return nodeHash;
 	}
 
-	private static float calculateFileHash(Inode file) {
+	public static float calculateFileHash(Inode file) {
+		if (file.getId() == 3) {
+			return 100;
+		}
 		return (float) file.getId();
 	}
 

@@ -1,3 +1,4 @@
+import java.io.File;
 import java.util.ArrayList;
 
 public class Inode {
@@ -8,11 +9,13 @@ public class Inode {
 	private boolean beingEdited;
 	private boolean haveEditing;
 	private boolean oldHash;
+	File file;
 
-	public Inode(int id) {
+	public Inode(int id, File file) {
 		children = new ArrayList<>();
 		parent = null;
 		this.id = id;
+		this.file = file;
 	}
 
 	/**
@@ -26,6 +29,10 @@ public class Inode {
 		if (!children.contains(child)) {
 			children.add(child);
 			child.parent = this;
+		}
+		
+		if (child.isBeingEdited() || child.doesHasEditing()) {
+			this.setHasEditing(true);
 		}
 
 		return false;
@@ -100,6 +107,15 @@ public class Inode {
 	}
 
 	/**
+	 * Sets the current ID of this node to the specified ID
+	 * 
+	 * @param id an int to set the current ID to
+	 */
+	public void setId(int id) {
+		this.id = id;
+	}
+
+	/**
 	 * @return The parent of this Inode, another Inode
 	 */
 	public Inode getParent() {
@@ -170,13 +186,15 @@ public class Inode {
 
 		builder.append(" hasEditing:: ");
 		builder.append(haveEditing);
-		
+
 		builder.append(" oldHash: ");
 		builder.append(oldHash);
+		
+		builder.append(" file: ");
+		builder.append(file.getName());
 
-		builder.append(" children: ");
-		builder.append("\n");
-
+		builder.append(" children: \n");
+		
 		for (Inode child : children) {
 			for (int i = 0; i <= level; i++) {
 				builder.append("\t");
