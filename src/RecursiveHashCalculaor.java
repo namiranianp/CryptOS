@@ -1,3 +1,7 @@
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -11,7 +15,7 @@ public class RecursiveHashCalculaor {
 	 * @param node The node being edited
 	 * @return The new hash value for the root node
 	 */
-	public static float calcultateHash(Inode node) {
+	public static String calcultateHash(Inode node) {
 		return recursivelyCalculateHash(node.getParent());
 	}
 
@@ -22,13 +26,26 @@ public class RecursiveHashCalculaor {
 	 * @param node The immediate parent of the node being edited
 	 * @return The new hash value for the root node
 	 */
-	private static float recursivelyCalculateHash(Inode node) {
+	private static String recursivelyCalculateHash(Inode node) {
 		System.out.print("node: " + node.getId());
-		float nodeHash;
+		File nodeFile = node.getFile();
+
+		if (nodeFile.isFile()) {
+			// if this is just a file, return our calculated hash
+			return calculateFileHash(node);
+		}
+
+		String nodeHash;
 		ArrayList<Inode> todo = new ArrayList<>(node.getChildren());
+		ArrayList<String> hashes = new ArrayList<>();
 		Inode child;
-		ArrayList<Float> hashes = new ArrayList<>();
-		hashes.add((float) node.getId());
+
+		// add directory metadata before adding children hashes
+		hashes.add(nodeFile.getAbsolutePath());
+		hashes.add(Long.toString(nodeFile.lastModified()));
+		hashes.add(Boolean.toString(nodeFile.canExecute()));
+		hashes.add(Boolean.toString(nodeFile.canRead()));
+		hashes.add(Boolean.toString(nodeFile.canWrite()));
 
 		// iterate over all children of this node
 		while (!todo.isEmpty()) {
@@ -36,7 +53,7 @@ public class RecursiveHashCalculaor {
 				child = todo.get(i);
 
 				if (child.isBeingEdited()) {
-					System.out.println(" 1");
+					System.out.println(" Option 1");
 					// TODO in multithreading we'd wait for this
 					child.setBeingEdited(false);
 
@@ -48,13 +65,13 @@ public class RecursiveHashCalculaor {
 					todo.remove(i);
 					i--;
 				} else if (child.hasOldHash()) {
-					System.out.println(" 2");
+					System.out.println(" Option 2");
 					// TODO in multithreading we'd wait for this
 					// child has an out of date hash, must recursively update downward
 
 					recursivelyCalculateHash(child);
-				} else if (!child.hasOldHash()){
-					System.out.println(" 3");
+				} else if (!child.hasOldHash()) {
+					System.out.println(" Option 3");
 					// child's hash has not changed
 
 					hashes.add(child.getHash());
@@ -75,11 +92,71 @@ public class RecursiveHashCalculaor {
 		return nodeHash;
 	}
 
-	public static float calculateFileHash(Inode file) {
-		if (file.getId() == 3) {
-			return 100;
+	public static String calculateGeneralHash(Inode node) {
+		try {
+			MessageDigest md = MessageDigest.getInstance("SHA-256");
+			File file = node.getFile();
+			Path filePath = node.getFile().toPath();
+			StringBuffer hashHex = new StringBuffer();
+			byte[] hashDigest;
+
+			if (file.isFile()) {
+				byte[] fileBytes = Files.readAllBytes(filePath);
+				md.update(fileBytes);
+			}
+
+			md.update(file.getAbsolutePath().getBytes());
+			md.update(Long.toString(file.lastModified()).getBytes());
+			md.update(Boolean.toString(file.canExecute()).getBytes());
+			md.update(Boolean.toString(file.canRead()).getBytes());
+			md.update(Boolean.toString(file.canWrite()).getBytes());
+
+			if (file.isDirectory()) {
+				for (Inode child : node.getChildren()) {
+					md.update(child.getHash().getBytes());
+				}
+			}
+
+			hashDigest = md.digest();
+			for (int i = 0; i < hashDigest.length; i++) {
+				hashHex.append(Integer.toHexString(0xFF & hashDigest[i]));
+			}
+
+			return hashHex.toString();
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+			return null;
 		}
-		return (float) file.getId();
+	}
+
+	public static String calculateFileHash(Inode node) {
+		try {
+			MessageDigest md = MessageDigest.getInstance("SHA-256");
+			File file = node.getFile();
+			Path filePath = node.getFile().toPath();
+			StringBuffer hashHex = new StringBuffer();
+			byte[] hashDigest;
+			byte[] fileBytes = Files.readAllBytes(filePath);
+
+			md.update(fileBytes);
+			md.update(file.getAbsolutePath().getBytes());
+			md.update(Long.toString(file.lastModified()).getBytes());
+			md.update(Boolean.toString(file.canExecute()).getBytes());
+			md.update(Boolean.toString(file.canRead()).getBytes());
+			md.update(Boolean.toString(file.canWrite()).getBytes());
+
+			hashDigest = md.digest();
+			for (int i = 0; i < hashDigest.length; i++) {
+				hashHex.append(Integer.toHexString(0xFF & hashDigest[i]));
+			}
+
+			return hashHex.toString();
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+			return null;
+		}
 	}
 
 	/**
@@ -89,15 +166,26 @@ public class RecursiveHashCalculaor {
 	 * @param node
 	 * @return
 	 */
-	private static float calculateHash(Collection<Float> nodeInfo) {
-		ArrayList<Float> asList = new ArrayList<Float>(nodeInfo);
-		float hash = 0;
-		
-		for (Float f : asList) {
-			System.out.print(" + " + f);
-			hash += f;
+	public static String calculateHash(Collection<String> nodeInfo) {
+		StringBuffer hashHex = new StringBuffer();
+		byte[] hashDigest;
+
+		try {
+			MessageDigest md = MessageDigest.getInstance("SHA-256");
+
+			for (String s : nodeInfo) {
+				md.update(s.getBytes());
+			}
+
+			hashDigest = md.digest();
+			for (int i = 0; i < hashDigest.length; i++) {
+				hashHex.append(Integer.toHexString(0xFF & hashDigest[i]));
+			}
+		} catch (Exception e) {
+			// TODO
+			System.exit(0);
 		}
-		System.out.println();
-		return hash;
+
+		return hashHex.toString();
 	}
 }

@@ -5,7 +5,7 @@ public class Inode {
 	private ArrayList<Inode> children;
 	private Inode parent;
 	private int id;
-	private float hash;
+	private String hash;
 	private boolean beingEdited;
 	private boolean haveEditing;
 	private boolean oldHash;
@@ -30,7 +30,7 @@ public class Inode {
 			children.add(child);
 			child.parent = this;
 		}
-		
+
 		if (child.isBeingEdited() || child.doesHasEditing()) {
 			this.setHasEditing(true);
 		}
@@ -93,7 +93,7 @@ public class Inode {
 	 * 
 	 * @param hash A float representing the updated hash for this Inode
 	 */
-	public void setHash(float hash) {
+	public void setHash(String hash) {
 		this.hash = hash;
 	}
 
@@ -116,6 +116,13 @@ public class Inode {
 	}
 
 	/**
+	 * @return The actual file this Inode represents
+	 */
+	public File getFile() {
+		return this.file;
+	}
+
+	/**
 	 * @return The parent of this Inode, another Inode
 	 */
 	public Inode getParent() {
@@ -132,7 +139,7 @@ public class Inode {
 	/**
 	 * @return The hash of this Inode
 	 */
-	public float getHash() {
+	public String getHash() {
 		return hash;
 	}
 
@@ -189,12 +196,12 @@ public class Inode {
 
 		builder.append(" oldHash: ");
 		builder.append(oldHash);
-		
+
 		builder.append(" file: ");
 		builder.append(file.getName());
 
 		builder.append(" children: \n");
-		
+
 		for (Inode child : children) {
 			for (int i = 0; i <= level; i++) {
 				builder.append("\t");
